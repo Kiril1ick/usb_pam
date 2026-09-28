@@ -158,3 +158,55 @@ char * get_user_config(unsigned user_id) {
     fclose(fd);
     return result_path;
 }
+
+node * read_config_to_list(const char *usr_config_path) {
+    if (usr_config_path == NULL) {
+        return NULL;
+    }
+
+    FILE *fd = fopen(usr_config_path, "r");
+    if (fd == NULL) {
+        perror("ERROR: Не удалось открыть персональный файл конфигурации для чтения");
+        return NULL;
+    }
+
+    node *allowed_devices_list = NULL; // Изначально список пуст
+    char line[1024];
+
+    // Построчно читаем usr.config
+    while (fgets(line, sizeof(line), fd) != NULL) {
+        // Удаляем перенос строки в конце, если он есть
+        line[strcspn(line, "\n")] = '\0';
+
+        // Пропускаем пустые строки
+        if (strlen(line) == 0) {
+            continue;
+        }
+
+        // Выделяем память под структуру одного устройства (используем ваше имя типа 'device')
+        device *dev = malloc(sizeof(device));
+        if (dev == NULL) {
+            perror("ERROR: Не хватило памяти для устройства");
+            continue; 
+        }
+        memset(dev, 0, sizeof(device));
+
+        // Разбираем строку формата PATH:VID:PID:MANUFACTURER:PRODUCT:SERIAL
+        // Спецификатор %[^:] означает "читать все символы, пока не встретится двоеточие"
+        int parsed = sscanf(line, "%255[^:]:%31[^:]:%31[^:]:%127[^:]:%127[^:]:%127[^\n]",
+                            dev->path, dev->vid, dev->pid, 
+                            dev->manufacturer, dev->product, dev->serial);
+
+        // Устройство считается валидным, если прочитались как минимум PATH, VID и PID (3 поля)
+        if (parsed >= 3) {
+            // Вставляем устройство в двусвязный список
+            insert_device(&allowed_devices_list, dev);
+        } else {
+            // Если строка оказалась битой или неполной — освобождаем память
+            free(dev); 
+        }
+    }
+
+    fclose(fd);
+    return allowed_devices_list; // Возвращаем получившийся белый список устройств
+}

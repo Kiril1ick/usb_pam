@@ -16,3 +16,5 @@ struct user_device{
 void write_config(node * devices);
 
 char * get_user_config(unsigned user_id);
+
+node * read_config_to_list(const char *usr_config_path);
