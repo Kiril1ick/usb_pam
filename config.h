@@ -14,3 +14,5 @@ struct user_device{
 
 
 void write_config(node * devices);
+
+char * get_user_config(unsigned user_id);
