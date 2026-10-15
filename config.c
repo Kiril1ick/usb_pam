@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <errno.h> 
+#include <pwd.h>
 #include "device.h"
 #include "config.h"
 #include "list.h"
@@ -28,15 +29,10 @@ void write_config(node * devices) {
     ud.user_id = user_id;
     ud.devices = devices;
     char buff[1024] = {0};
-
-    char * home_dir = getenv("HOME");
-    if (home_dir == NULL) {
-        fprintf(stderr, "ERROR: Переменная окружения HOME не найдена\n");
-        return;
+    struct passwd *pw = getpwuid(user_id);
+    if (pw != NULL && pw->pw_dir != NULL) {
+        snprintf(buff, sizeof(buff), "%s/.usb_pam", pw->pw_dir);
     }
-
-    strcat(buff, home_dir);
-    strcat(buff, "/.usb_pam");
     printf("HOME: %s\n", buff);
     
     int check = create_cfg_dir(buff);
@@ -45,10 +41,7 @@ void write_config(node * devices) {
         return;
     }
     strcat(buff, "/usr.config"); // Теперь buff содержит путь к usr.config
-
-    // --- НАЧАЛО ПРОВЕРКИ И ОБНОВЛЕНИЯ ГЛАВНОГО КОНФИГА ---
     
-    // Проверяем, существует ли пользователь в базе данных
     char *existing_path = get_user_config(ud.user_id);
 
     if (existing_path == NULL) {
@@ -192,7 +185,6 @@ node * read_config_to_list(const char *usr_config_path) {
         memset(dev, 0, sizeof(device));
 
         // Разбираем строку формата PATH:VID:PID:MANUFACTURER:PRODUCT:SERIAL
-        // Спецификатор %[^:] означает "читать все символы, пока не встретится двоеточие"
         int parsed = sscanf(line, "%255[^:]:%31[^:]:%31[^:]:%127[^:]:%127[^:]:%127[^\n]",
                             dev->path, dev->vid, dev->pid, 
                             dev->manufacturer, dev->product, dev->serial);
@@ -202,11 +194,10 @@ node * read_config_to_list(const char *usr_config_path) {
             // Вставляем устройство в двусвязный список
             insert_device(&allowed_devices_list, dev);
         } else {
-            // Если строка оказалась битой или неполной — освобождаем память
             free(dev); 
         }
     }
 
     fclose(fd);
-    return allowed_devices_list; // Возвращаем получившийся белый список устройств
+    return allowed_devices_list;
 }
