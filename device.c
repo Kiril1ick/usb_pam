@@ -1,5 +1,6 @@
 #include "device.h"
 #include "list.h"
+#include "./crypto/crypt.h"
 
 char *base_path = "/sys/bus/usb/devices";
 
@@ -26,8 +27,8 @@ int get_usb_device_info(const char *sys_path, device *dev) {
         return 0;
     }
 
-    strncpy(dev->path, sys_path, sizeof(dev->path) - 1);
-    dev->path[sizeof(dev->path) - 1] = '\0';
+    /*strncpy(dev->path, sys_path, sizeof(dev->path) - 1);
+    dev->path[sizeof(dev->path) - 1] = '\0';*/
 
     read_sysfs_attribute(sys_path, "idVendor", dev->vid, sizeof(dev->vid));
     read_sysfs_attribute(sys_path, "idProduct", dev->pid, sizeof(dev->pid));
@@ -57,7 +58,7 @@ node * init_devices_list() {
             continue;
         }
 
-        device *dev = malloc(sizeof(device));
+        device *dev = calloc(1, sizeof(device));;
         if (dev == NULL) {
             continue;
         }
@@ -92,4 +93,40 @@ void clear_devices_list(node * devices) {
         free(current);
         current = next_node;
     }
+}
+
+
+void hashing_gevices_id(node * devices, struct hash_alg_t * hash_alg) {
+    if (devices == NULL || hash_alg == NULL) {
+        return;
+    }
+    node * current = devices;
+    char temp_buff[512]; 
+
+    while (current != NULL) {
+        if (current->device != NULL) {
+            snprintf(temp_buff, sizeof(temp_buff), "%s:%s", 
+                     current->device->pid, 
+                     current->device->vid);
+
+            char *hash = get_hash(temp_buff, hash_alg);
+
+            if (hash != NULL) {
+                // Безопасно копируем полученный результат
+                size_t max_to_copy = sizeof(current->device->hash) - 1;
+                strncpy(current->device->hash, hash, max_to_copy);
+                current->device->hash[max_to_copy] = '\0'; 
+
+                // Обязательно освобождаем память, если get_hash выделил её через malloc/strdup
+                free(hash); 
+            } else {
+                current->device->hash[0] = '\0';
+            }
+        }
+        
+        // Переходим к следующему элементу
+        current = current->next;
+    }
+    
+    // Больше никакой free(buff) не нужен, стек очистится сам!
 }

@@ -7,8 +7,11 @@
 #include <unistd.h>
 #include "list.h"
 
+struct node_t;
+struct hash_alg_t; 
+
 typedef struct device_t{
-    char path[256];
+    char hash[512];
     char vid[32];
     char pid[32];           
     char manufacturer[128];
@@ -23,3 +26,5 @@ node * init_devices_list();
 int devices_count(void);
 
 void clear_devices_list(node * devices);
+
+void hashing_gevices_id(node * devices, struct hash_alg_t * hash_alg);

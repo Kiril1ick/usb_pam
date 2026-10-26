@@ -55,8 +55,8 @@ void remove_node(node ** list, node * rnode) {
 void print_devices(node * list){
     node * tmp = list;
     while (tmp != NULL){
-        if(tmp->device != NULL)
-            printf("%s\n", tmp->device->vid);
+        if(tmp->device != NULL && tmp->device->hash != NULL)
+            printf("%s\n", tmp->device->hash);
         tmp = tmp->next;
     }
     

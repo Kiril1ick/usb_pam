@@ -4,6 +4,7 @@
 #include "device.h"
 #include "list.h"
 #include "config.h"
+#include "./crypto/crypt.h"
 
 int main() {
     unsigned uid = getuid();
@@ -18,53 +19,11 @@ int main() {
     }
 
     printf("\n=== ТЕКУЩИЕ ПОДКЛЮЧЕННЫЕ УСТРОЙСТВА (Физические) ===\n");
+    hash_alg hash_alg;
+    hash_alg.halg = STRIBOG;
+    hash_alg.hsize = KEY512;
+    hashing_gevices_id(my_cur_list, &hash_alg);
     print_devices(my_cur_list);
-
-    // 2. Ищем путь к персональному файлу конфигурации в /etc/usb_pam.cfg
-    char *cfg_path = get_user_config(uid);
-    if (cfg_path == NULL) {
-        printf("\nКонфигурация для пользователя не найдена в базе данных.\n");
-        printf("Сначала запустите сканирование с активной функцией write_config().\n");
-        clear_devices_list(my_cur_list);
-        return 0;
-    }
-    printf("\nНайден путь к зарегистрированному белому списку: %s\n", cfg_path);
-
-    // 3. Восстанавливаем белый список устройств из файла конфигурации
-    node * cfg_list = read_config_to_list(cfg_path);
-    free(cfg_path); // Освобождаем динамическую строку, возвращенную из get_user_config
-
-    printf("\n=== УСТРОЙСТВА ИЗ БЕЛОГО СПИСКА (Зарегистрированные) ===\n");
-    if (cfg_list != NULL) {
-        print_devices(cfg_list);
-    } else {
-        printf("(Белый список пуст или файл конфигурации еще не был создан)\n");
-    }
-
-    // 4. Логика сверки (опционально, для наглядности теста)
-    printf("\nПроверка авторизации...\n");
-    int access_granted = 0;
-    node *tmp = my_cur_list;
-    while (tmp != NULL) {
-        if (tmp->device != NULL && search_in_list(cfg_list, tmp->device) != NULL) {
-            access_granted = 1;
-            break;
-        }
-        tmp = tmp->next;
-    }
-    
-    if (access_granted) {
-        printf(">>> ДОСТУП РАЗРЕШЕН: Найдено доверенное USB-устройство <<<\n");
-    } else {
-        printf(">>> ДОСТУП ЗАПРЕЩЕН: Доверенные устройства не обнаружены <<<\n");
-    }
-
-    // 5. Корректно очищаем всю выделенную память для обоих списков
+    write_config(my_cur_list);
     clear_devices_list(my_cur_list);
-    if (cfg_list != NULL) {
-        clear_devices_list(cfg_list);
-    }
-
-    printf("\nПамять очищена. Программа завершена.\n");
-    return 0;
 }

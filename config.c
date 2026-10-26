@@ -1,11 +1,4 @@
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <errno.h> 
-#include <pwd.h>
-#include "device.h"
 #include "config.h"
-#include "list.h"
 
 const char *main_config_path = "/etc/usb_pam.cfg";
 static const char *tmp_config_path = "/etc/usb_pam.tmp";
@@ -97,19 +90,14 @@ void write_config(node * devices) {
     // 3. Запись персонального конфига пользователя (без изменений)
     FILE *fd = fopen(buff, "w");
     if (fd == NULL) {
-        printf("ERROR: Can`t open usr.cfg: %s\n", buff);
+        fprintf(stderr, "ERROR: Can`t open usr.cfg: %s\n", buff);
         return; 
     }
-
     buff[0] = 0;
     node * tmp = ud.devices;
     while (tmp != NULL) {
         if (tmp->device != NULL) {
-            strcat(buff, tmp->device->path);
-            strcat(buff, ":");
-            strcat(buff, tmp->device->vid);
-            strcat(buff, ":");
-            strcat(buff, tmp->device->pid);
+            strcat(buff, tmp->device->hash);
             strcat(buff, ":");
             strcat(buff, tmp->device->manufacturer);
             strcat(buff, ":");
@@ -119,7 +107,7 @@ void write_config(node * devices) {
             strcat(buff, "\n");
             
             fprintf(fd, "%s", buff);
-            buff[0] = 0; 
+            buff[0] = 0;
         }
         tmp = tmp->next;
     }
@@ -185,9 +173,8 @@ node * read_config_to_list(const char *usr_config_path) {
         memset(dev, 0, sizeof(device));
 
         // Разбираем строку формата PATH:VID:PID:MANUFACTURER:PRODUCT:SERIAL
-        int parsed = sscanf(line, "%255[^:]:%31[^:]:%31[^:]:%127[^:]:%127[^:]:%127[^\n]",
-                            dev->path, dev->vid, dev->pid, 
-                            dev->manufacturer, dev->product, dev->serial);
+        int parsed = sscanf(line, "%511[^:]:%127[^:]:%127[^:]:%127[^\n]",
+                            dev->hash, dev->manufacturer, dev->product, dev->serial);
 
         // Устройство считается валидным, если прочитались как минимум PATH, VID и PID (3 поля)
         if (parsed >= 3) {

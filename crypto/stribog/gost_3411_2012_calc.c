@@ -1,5 +1,5 @@
 #include "gost_3411_2012_calc.h"
-
+/*
 //#define DEBUG_MODE
 
 #ifdef DEBUG_MODE
@@ -12,7 +12,7 @@ GOSTHashPrintDebug(uint8_t *state)
     printf("\n");
 }
 #endif
-
+*/
 void
 GOSTHashInit(TGOSTHashContext *CTX, uint16_t hash_size)
 {

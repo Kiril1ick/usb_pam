@@ -5,7 +5,14 @@
 #include <dirent.h>
 #include <unistd.h>
 #include "list.h"
-
+#include "./crypto/crypt.h"
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <errno.h> 
+#include <pwd.h>
+#include "device.h"
+#include "list.h"
 
 struct user_device{
     unsigned user_id;
